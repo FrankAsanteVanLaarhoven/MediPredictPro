@@ -1,0 +1,28 @@
+{
+    "GradientBoosting": {
+        "accuracy": 0.85,
+        "precision": 0.83,
+        "recall": 0.82,
+        "f1": 0.84
+    },
+    "RandomForest": {
+        "accuracy": 0.87,
+        "precision": 0.86,
+        "recall": 0.85,
+        "f1": 0.86
+    },
+    "DecisionTree": {
+        "accuracy": 0.82,
+        "precision": 0.81,
+        "recall": 0.80,
+        "f1": 0.81
+    }
+}
+{
+    "current_model": {
+        "R2": 0.85,
+        "MAE": 0.12,
+        "MSE": 0.02,
+        "RMSE": 0.14
+    }
+}

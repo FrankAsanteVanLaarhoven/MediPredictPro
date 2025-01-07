@@ -1,0 +1,17 @@
+models:
+  medicprepro_gb:
+    file: medicprepro_gb.joblib
+    name: Gradient Boosting Model
+    parameters:
+      learning_rate: 0.1
+      n_estimators: 100
+      random_state: 42
+    type: GradientBoostingRegressor
+  medicprepro_rf:
+    file: medicprepro_rf.joblib
+    name: Random Forest Model
+    parameters:
+      max_depth: 10
+      n_estimators: 100
+      random_state: 42
+    type: RandomForestRegressor

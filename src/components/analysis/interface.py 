@@ -1,0 +1,70 @@
+import streamlit as st
+import plotly.express as px
+import pandas as pd
+
+def render_analysis_interface(df: pd.DataFrame):
+    """Render the analysis interface"""
+    st.title("Medicine Data Analysis")
+    
+    # Analysis type selector
+    analysis_type = st.selectbox(
+        "Select Analysis Type",
+        ["Overview", "Review Analysis", "Manufacturer Analysis"]
+    )
+    
+    if analysis_type == "Overview":
+        render_overview(df)
+    elif analysis_type == "Review Analysis":
+        render_review_analysis(df)
+    elif analysis_type == "Manufacturer Analysis":
+        render_manufacturer_analysis(df)
+
+def render_overview(df: pd.DataFrame):
+    """Render data overview"""
+    st.subheader("Data Overview")
+    
+    # Basic statistics
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Total Medicines", len(df))
+        st.metric("Total Manufacturers", df['Manufacturer'].nunique())
+    
+    with col2:
+        st.metric("Average Rating", f"{df['Excellent Review %'].mean():.1f}%")
+        st.metric("Medicines with Side Effects", 
+                 f"{df['Side_effects'].notna().sum()}")
+    
+    # Show sample data
+    st.subheader("Sample Data")
+    st.dataframe(df.head())
+
+def render_review_analysis(df: pd.DataFrame):
+    """Render review analysis"""
+    st.subheader("Review Score Analysis")
+    
+    # Review distribution
+    fig = px.violin(
+        df,
+        y=["Excellent Review %", "Average Review %", "Poor Review %"],
+        box=True,
+        title="Review Score Distribution"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def render_manufacturer_analysis(df: pd.DataFrame):
+    """Render manufacturer analysis"""
+    st.subheader("Manufacturer Analysis")
+    
+    # Top manufacturers
+    top_mfg = (df.groupby('Manufacturer')['Excellent Review %']
+               .agg(['mean', 'count'])
+               .sort_values('mean', ascending=False)
+               .head(10))
+    
+    fig = px.bar(
+        top_mfg,
+        y='mean',
+        title="Top 10 Manufacturers by Review Score",
+        labels={'mean': 'Average Excellent Review %'}
+    )
+    st.plotly_chart(fig, use_container_width=True)

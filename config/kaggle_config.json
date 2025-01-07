@@ -1,0 +1,16 @@
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+
+# Access environment variables
+kaggle_config = {
+    "username": os.getenv("KAGGLE_USERNAME"),
+    "key": os.getenv("KAGGLE_KEY"),
+    "dataset": {
+        "name": os.getenv("KAGGLE_DATASET_NAME"),
+        "files": ["Medicine_Details.csv"]
+    },
+    "download_path": os.getenv("KAGGLE_DOWNLOAD_PATH")
+}
