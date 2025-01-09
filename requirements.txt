@@ -17,3 +17,5 @@ kaggle==1.6.3  # Change this line
 kagglehub
 seaborn==0.13.2
 matplotlib==3.8.3
+ydata-profiling
+streamlit-pandas-profiling

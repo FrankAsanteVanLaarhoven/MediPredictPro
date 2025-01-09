@@ -273,7 +273,6 @@ class Dashboard:
         if data is None or data.empty:
             st.info("Please load data using the sidebar controls")
             return False
-        return True
         if not all(col in data.columns for col in self.required_columns):
             st.error(f"Missing required columns. Your data must include: {', '.join(self.required_columns)}")
             st.write("Available columns:", data.columns.tolist())
@@ -397,6 +396,77 @@ class Dashboard:
         except Exception as e:
             st.error(f"Error in charts: {str(e)}")
 
+    def render_eda_analysis(self, data: pd.DataFrame):
+        """Render EDA analysis section"""
+        try:
+            st.header("Exploratory Data Analysis 🔍")
+            
+            tabs = st.tabs(["Basic Stats", "Distributions", "Correlations", "Profiling"])
+            
+            with tabs[0]:
+                st.subheader("Basic Statistics")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write("Dataset Info")
+                    buffer = io.StringIO()
+                    data.info(buf=buffer)
+                    st.text(buffer.getvalue())
+                
+                with col2:
+                    st.write("Summary Statistics")
+                    st.dataframe(data.describe())
+                
+                st.write("Missing Values")
+                missing = pd.DataFrame({
+                    'Column': data.columns,
+                    'Missing Values': data.isnull().sum(),
+                    'Percentage': (data.isnull().sum() / len(data) * 100).round(2)
+                })
+                st.dataframe(missing)
+            
+            with tabs[1]:
+                st.subheader("Distribution Analysis")
+                numeric_cols = data.select_dtypes(include=['float64', 'int64']).columns
+                selected_col = st.selectbox("Select Column", numeric_cols)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig = px.histogram(data, x=selected_col, title=f'Distribution of {selected_col}')
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    fig = px.box(data, y=selected_col, title=f'Box Plot of {selected_col}')
+                    st.plotly_chart(fig, use_container_width=True)
+            
+            with tabs[2]:
+                st.subheader("Correlation Analysis")
+                numeric_data = data.select_dtypes(include=['float64', 'int64'])
+                corr_matrix = numeric_data.corr()
+                
+                fig = px.imshow(
+                    corr_matrix,
+                    title='Correlation Matrix',
+                    color_continuous_scale='RdBu'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with tabs[3]:
+                st.subheader("Pandas Profiling")
+                if st.button("Generate Profiling Report"):
+                    try:
+                        from ydata_profiling import ProfileReport
+                        from streamlit_pandas_profiling import st_profile_report
+                        
+                        with st.spinner("Generating Profile Report..."):
+                            profile = ProfileReport(data, minimal=True)
+                            st_profile_report(profile)
+                    except ImportError:
+                        st.error("Please install ydata-profiling: pip install ydata-profiling streamlit-pandas-profiling")
+                
+        except Exception as e:
+            st.error(f"Error in EDA analysis: {str(e)}")
+
     def render_export_options(self, filtered_data: pd.DataFrame):
         """Render export options section"""
         try:
@@ -447,16 +517,18 @@ class Dashboard:
             filtered_data = self.render_filters(data)
             self.render_metrics(filtered_data, data)
             self.render_charts(filtered_data)
+            
+            with st.expander("Exploratory Data Analysis 📊"):
+                self.render_eda_analysis(filtered_data)
+            
             self.render_export_options(filtered_data)
             
             with st.expander("Data Preview 👀"):
                 st.dataframe(filtered_data, use_container_width=True, hide_index=True)
             
-            if st.checkbox("Show Advanced Analytics"):
-                render_advanced_analytics(data)
         except Exception as e:
             st.error(f"An unexpected error occurred: {str(e)}")
-            st.exception(e)
+            st.exception(e))
 
 # =============================================================================
 # ADVANCED ANALYTICS FUNCTIONS
