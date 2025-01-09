@@ -690,16 +690,6 @@ def health_check():
 if "health" in st.query_params:
     st.write(health_check())
     st.stop()
-    
-    
-try:
-    from kaggle.api.kaggle_api_extended import KaggleApi
-    KAGGLE_AVAILABLE = True
-except Exception as e:
-    KAGGLE_AVAILABLE = False
-    st.warning("Kaggle API not available. Some features may be limited.")
-
-
 
 def main():
     try:
