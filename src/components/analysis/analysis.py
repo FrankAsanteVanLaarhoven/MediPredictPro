@@ -1,3 +1,6 @@
+# =============================================================================
+# IMPORTS AND SETUP
+# =============================================================================
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,6 +10,9 @@ from typing import Optional
 import time
 from datetime import datetime, timedelta
 
+# =============================================================================
+# ANALYSIS PAGE FUNCTIONS
+# =============================================================================
 def render_analysis(data: pd.DataFrame):
     """Render the analysis page with various analytical components"""
     st.title("Medicine Analysis 📊")
@@ -20,7 +26,7 @@ def render_analysis(data: pd.DataFrame):
         
         tab1, tab2, tab3, tab4 = st.tabs([
             "Overview Statistics",
-            "Price Analysis",
+            "Price Analysis", 
             "Effectiveness Analysis",
             "Manufacturer Comparison"
         ])
@@ -35,6 +41,7 @@ def render_analysis(data: pd.DataFrame):
             render_manufacturer_comparison(data)
 
 def render_overview_statistics(data: pd.DataFrame):
+    """Render overview statistics section"""
     st.subheader("Overview Statistics")
     st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
@@ -50,40 +57,128 @@ def render_overview_statistics(data: pd.DataFrame):
             st.metric("Average Effectiveness", f"{avg_score:.1f}")
 
 def render_price_analysis(data: pd.DataFrame):
+    """Render price analysis section"""
     st.subheader("Price Analysis")
     
-    fig = px.histogram(data, x='Price', nbins=50, title='Price Distribution')
+    # Price distribution histogram
+    fig = px.histogram(
+        data, 
+        x='Price', 
+        nbins=50, 
+        title='Price Distribution'
+    )
     st.plotly_chart(fig, use_container_width=True)
     
-    fig = px.box(data, x='Manufacturer', y='Price', title='Price by Manufacturer')
+    # Price by manufacturer box plot
+    fig = px.box(
+        data, 
+        x='Manufacturer', 
+        y='Price', 
+        title='Price by Manufacturer'
+    )
     fig.update_xaxes(tickangle=45)
     st.plotly_chart(fig, use_container_width=True)
 
 def render_effectiveness_analysis(data: pd.DataFrame):
+    """Render effectiveness analysis section"""
     st.subheader("Effectiveness Analysis")
     
     if 'Overall_Score' in data.columns:
-        fig = px.histogram(data, x='Overall_Score', nbins=20)
+        # Effectiveness distribution
+        fig = px.histogram(
+            data, 
+            x='Overall_Score', 
+            nbins=20,
+            title='Effectiveness Distribution'
+        )
         st.plotly_chart(fig, use_container_width=True)
         
-        fig = px.scatter(data, x='Price', y='Overall_Score', color='Manufacturer')
+        # Price vs Effectiveness scatter plot
+        fig = px.scatter(
+            data, 
+            x='Price', 
+            y='Overall_Score', 
+            color='Manufacturer',
+            title='Price vs Effectiveness by Manufacturer'
+        )
         st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("Effectiveness data not available")
 
 def render_manufacturer_comparison(data: pd.DataFrame):
+    """Render manufacturer comparison section"""
     st.subheader("Manufacturer Comparison")
     
-    fig = px.pie(data, names='Manufacturer', title='Market Share')
+    # Market share pie chart
+    fig = px.pie(
+        data, 
+        names='Manufacturer', 
+        title='Market Share by Manufacturer'
+    )
     st.plotly_chart(fig, use_container_width=True)
     
+    # Manufacturer statistics
     stats = data.groupby('Manufacturer').agg({
         'Price': 'mean',
         'Overall_Score': 'mean' if 'Overall_Score' in data.columns else 'count'
     }).reset_index()
     
-    fig = px.bar(stats, x='Manufacturer', y=['Price', 'Overall_Score'])
+    # Comparative bar chart
+    fig = px.bar(
+        stats, 
+        x='Manufacturer', 
+        y=['Price', 'Overall_Score'],
+        title='Price and Effectiveness by Manufacturer'
+    )
     fig.update_xaxes(tickangle=45)
     st.plotly_chart(fig, use_container_width=True)
 
+# =============================================================================
+# DATA PROCESSING
+# =============================================================================
 @st.cache_data(ttl=3600)
 def process_data_for_analysis(data: pd.DataFrame) -> pd.DataFrame:
-    return data.copy()
+    """
+    Process and cache data for analysis
+    
+    Args:
+        data (pd.DataFrame): Input dataframe
+        
+    Returns:
+        pd.DataFrame: Processed dataframe
+    """
+    try:
+        processed_data = data.copy()
+        
+        # Add any data processing steps here
+        # For example:
+        # - Handle missing values
+        # - Convert data types
+        # - Calculate additional metrics
+        
+        return processed_data
+    except Exception as e:
+        st.error(f"Error processing data: {str(e)}")
+        return data
+
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+if __name__ == "__main__":
+    # This section will only run if the file is run directly
+    st.set_page_config(
+        page_title="Medicine Analysis",
+        page_icon="📊",
+        layout="wide"
+    )
+    
+    # Load sample data for testing
+    sample_data = pd.DataFrame({
+        'Medicine_Name': [f'Med_{i}' for i in range(100)],
+        'Price': np.random.uniform(10, 1000, 100),
+        'Manufacturer': np.random.choice(['Pfizer', 'Novartis', 'Roche'], 100),
+        'Overall_Score': np.random.uniform(60, 100, 100)
+    })
+    
+    # Render analysis page
+    render_analysis(sample_data)

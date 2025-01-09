@@ -1,3 +1,6 @@
+# =============================================================================
+# IMPORTS AND SETUP
+# =============================================================================
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -6,206 +9,228 @@ import plotly.graph_objects as go
 from sklearn.preprocessing import MinMaxScaler
 from datetime import datetime
 
+# =============================================================================
+# MAIN PREDICTION INTERFACE
+# =============================================================================
 def enhance_prediction_interface():
     """Enhanced prediction interface with additional features"""
     st.title("MediPredictPro - Medicine Effectiveness Prediction")
     
-    # Input Form
     with st.form("prediction_form"):
-        col1, col2 = st.columns(2)
+        render_input_columns()
+        advanced_options = render_advanced_options()
         
-        # Left column - Basic Details
-        with col1:
-            medicine_details = get_medicine_details()
-        
-        # Right column - Additional Info
-        with col2:
-            additional_info = get_additional_info()
-        
-        # Advanced Options
-        advanced_options = get_advanced_options()
-        
-        # Submit button
-        submitted = st.form_submit_button("Predict Effectiveness", type="primary")
-        
-        if submitted:
-            process_prediction(medicine_details, additional_info, advanced_options)
+        if st.form_submit_button("Predict Effectiveness", type="primary"):
+            process_prediction_request(advanced_options)
 
-def get_medicine_details():
-    """Get basic medicine details"""
+def render_input_columns():
+    """Render input form columns"""
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.session_state.medicine_details = render_medicine_details()
+    with col2:
+        st.session_state.additional_info = render_additional_info()
+
+# =============================================================================
+# INPUT SECTIONS
+# =============================================================================
+def render_medicine_details():
+    """Render medicine details section"""
     st.subheader("Medicine Details")
     
     return {
-        'name': st.text_input(
-            "Medicine Name",
-            help="Enter the name of the medicine"
-        ),
-        'composition': st.text_area(
-            "Composition",
-            help="Enter the medicine composition"
-        ),
-        'manufacturer': st.selectbox(
-            "Manufacturer",
-            options=sorted(st.session_state.data['Manufacturer'].unique()),
-            help="Select the manufacturer"
-        ),
-        'price': st.number_input(
-            "Price",
-            min_value=0.0,
-            max_value=10000.0,
-            value=100.0,
-            step=10.0,
-            help="Enter medicine price"
-        ),
-        'dosage_form': st.selectbox(
-            "Dosage Form",
-            options=['Tablet', 'Capsule', 'Injection', 'Syrup', 'Other'],
-            help="Select the dosage form"
-        )
+        'name': render_name_input(),
+        'composition': render_composition_input(),
+        'manufacturer': render_manufacturer_input(),
+        'price': render_price_input(),
+        'dosage_form': render_dosage_form_input()
     }
 
-def get_additional_info():
-    """Get additional medicine information"""
+def render_additional_info():
+    """Render additional information section"""
     st.subheader("Additional Information")
     
     return {
-        'side_effects': st.text_area(
-            "Side Effects",
-            help="Enter known side effects"
-        ),
-        'usage_complexity': st.slider(
-            "Usage Complexity",
-            min_value=1,
-            max_value=10,
-            value=5,
-            help="Rate the complexity of usage from 1 to 10"
-        ),
-        'treatment_duration': st.number_input(
-            "Treatment Duration (days)",
-            min_value=1,
-            max_value=365,
-            value=30,
-            help="Expected duration of treatment"
-        ),
-        'storage_temp': st.slider(
-            "Storage Temperature (°C)",
-            min_value=2,
-            max_value=30,
-            value=25,
-            help="Recommended storage temperature"
-        )
+        'side_effects': render_side_effects_input(),
+        'usage_metrics': render_usage_metrics(),
+        'storage_requirements': render_storage_requirements()
     }
 
-def get_advanced_options():
-    """Get advanced prediction options"""
+# =============================================================================
+# INPUT COMPONENTS
+# =============================================================================
+def render_name_input():
+    """Render medicine name input"""
+    return st.text_input(
+        "Medicine Name",
+        help="Enter the complete medicine name"
+    )
+
+def render_composition_input():
+    """Render composition input"""
+    return st.text_area(
+        "Composition",
+        help="Enter the full medicine composition"
+    )
+
+def render_manufacturer_input():
+    """Render manufacturer selection"""
+    manufacturers = get_sorted_manufacturers()
+    return st.selectbox(
+        "Manufacturer",
+        options=manufacturers,
+        help="Select the medicine manufacturer"
+    )
+
+def render_price_input():
+    """Render price input"""
+    return st.number_input(
+        "Price",
+        min_value=0.0,
+        max_value=10000.0,
+        value=100.0,
+        step=10.0,
+        help="Enter medicine price"
+    )
+
+# =============================================================================
+# ADVANCED OPTIONS
+# =============================================================================
+def render_advanced_options():
+    """Render advanced prediction options"""
     with st.expander("Advanced Options"):
         col1, col2 = st.columns(2)
         
         with col1:
-            confidence_threshold = st.slider(
-                "Confidence Threshold",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.8,
-                help="Minimum confidence level for predictions"
-            )
-            
-            include_uncertainty = st.checkbox(
-                "Include Uncertainty Estimates",
-                value=True,
-                help="Show confidence intervals for predictions"
-            )
-        
+            confidence_settings = render_confidence_settings()
         with col2:
-            analysis_mode = st.radio(
-                "Analysis Mode",
-                ["Standard", "Detailed", "Expert"],
-                help="Select level of analysis detail"
-            )
-            
-            compare_similar = st.checkbox(
-                "Compare with Similar Medicines",
-                value=True,
-                help="Show comparison with similar medicines"
-            )
+            analysis_settings = render_analysis_settings()
         
-        return {
-            'confidence_threshold': confidence_threshold,
-            'include_uncertainty': include_uncertainty,
-            'analysis_mode': analysis_mode,
-            'compare_similar': compare_similar
-        }
+        return {**confidence_settings, **analysis_settings}
 
-def process_prediction(medicine_details, additional_info, advanced_options):
+def render_confidence_settings():
+    """Render confidence-related settings"""
+    return {
+        'confidence_threshold': st.slider(
+            "Confidence Threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.8,
+            help="Minimum confidence level for predictions"
+        ),
+        'include_uncertainty': st.checkbox(
+            "Include Uncertainty Estimates",
+            value=True,
+            help="Show confidence intervals for predictions"
+        )
+    }
+
+def render_analysis_settings():
+    """Render analysis-related settings"""
+    return {
+        'analysis_mode': st.radio(
+            "Analysis Mode",
+            ["Standard", "Detailed", "Expert"],
+            help="Select level of analysis detail"
+        ),
+        'compare_similar': st.checkbox(
+            "Compare with Similar Medicines",
+            value=True,
+            help="Show comparison with similar medicines"
+        )
+    }
+
+# =============================================================================
+# PREDICTION PROCESSING
+# =============================================================================
+def process_prediction_request(advanced_options):
     """Process the prediction request"""
     with st.spinner("Analyzing medicine effectiveness..."):
         try:
-            # Preprocess inputs
-            features = preprocess_input(medicine_details, additional_info)
+            features = preprocess_inputs()
+            prediction_results = get_prediction(features)
             
-            # Get prediction
-            prediction, probabilities = predict_effectiveness(features)
-            
-            if prediction is not None:
-                display_prediction_results(
-                    prediction,
-                    probabilities,
-                    features,
-                    advanced_options
-                )
+            if prediction_results:
+                display_results(prediction_results, features, advanced_options)
+                save_to_history(prediction_results)
                 
-                # Save prediction to history
-                save_prediction_history(
-                    medicine_details['name'],
-                    prediction,
-                    probabilities
-                )
         except Exception as e:
-            st.error(f"Error during prediction: {str(e)}")
+            handle_prediction_error(e)
 
-def predict_effectiveness(features):
-    """Make effectiveness prediction"""
+def preprocess_inputs():
+    """Preprocess input data for prediction"""
+    medicine_details = st.session_state.medicine_details
+    additional_info = st.session_state.additional_info
+    
+    # Add preprocessing logic here
+    return {**medicine_details, **additional_info}
+
+def get_prediction(features):
+    """Get prediction from model"""
     try:
-        if 'model' not in st.session_state:
-            raise ValueError("Model not loaded")
-            
+        validate_model()
+        
         prediction = st.session_state.model.predict(features)[0]
         probabilities = st.session_state.model.predict_proba(features)[0]
         
-        return prediction, probabilities
+        return {
+            'prediction': prediction,
+            'probabilities': probabilities
+        }
     except Exception as e:
-        st.error(f"Prediction error: {str(e)}")
-        return None, None
+        handle_prediction_error(e)
+        return None
 
-def display_prediction_results(prediction, probabilities, features, options):
-    """Display prediction results with visualizations"""
+# =============================================================================
+# RESULTS DISPLAY
+# =============================================================================
+def display_results(results, features, options):
+    """Display prediction results"""
     st.success("Prediction Complete!")
     
-    # Display metrics
-    display_metrics(prediction, probabilities)
+    display_prediction_metrics(results)
     
-    # Show uncertainty analysis if requested
     if options['include_uncertainty']:
-        display_uncertainty_analysis(prediction, probabilities)
+        display_uncertainty_analysis(results)
     
-    # Show similar medicines if requested
     if options['compare_similar']:
-        display_similar_medicines(features, prediction, options['analysis_mode'])
+        display_similar_medicines(features, results)
     
-    # Show feature importance for expert mode
     if options['analysis_mode'] == "Expert":
-        display_feature_importance(features)
+        display_expert_analysis(features, results)
 
-def save_prediction_history(medicine_name, prediction, probabilities):
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+def validate_model():
+    """Validate model availability"""
+    if 'model' not in st.session_state:
+        raise ValueError("Model not loaded")
+
+def handle_prediction_error(error):
+    """Handle prediction errors"""
+    st.error(f"Error during prediction: {str(error)}")
+    st.exception(error)
+
+def save_to_history(results):
     """Save prediction to history"""
     if 'prediction_history' not in st.session_state:
         st.session_state.prediction_history = []
     
     st.session_state.prediction_history.append({
         'timestamp': datetime.now(),
-        'medicine_name': medicine_name,
-        'prediction': prediction,
-        'confidence': max(probabilities)
+        'prediction': results['prediction'],
+        'confidence': max(results['probabilities'])
     })
 
-# Add other helper functions (display_metrics, display_uncertainty_analysis, etc.)
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+if __name__ == "__main__":
+    st.set_page_config(
+        page_title="Medicine Effectiveness Prediction",
+        page_icon="💊",
+        layout="wide"
+    )
+    enhance_prediction_interface()

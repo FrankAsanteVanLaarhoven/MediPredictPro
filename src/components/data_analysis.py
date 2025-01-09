@@ -1,3 +1,6 @@
+# =============================================================================
+# IMPORTS AND SETUP
+# =============================================================================
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
@@ -5,26 +8,38 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# =============================================================================
+# MAIN ANALYSIS RENDERER
+# =============================================================================
 def render_data_analysis():
     """Render comprehensive data analysis page"""
     st.title("Medicine Data Analysis")
+    
+    analysis_type = render_sidebar_controls()
+    
+    analysis_functions = {
+        "Distribution Analysis": render_distribution_analysis,
+        "Correlation Analysis": render_correlation_analysis,
+        "Manufacturer Analysis": render_manufacturer_analysis,
+        "Review Analysis": render_review_analysis,
+        "Composition Analysis": render_composition_analysis
+    }
+    
+    analysis_functions[analysis_type]()
 
-    # Sidebar controls
+def render_sidebar_controls():
+    """Render sidebar controls for analysis"""
     st.sidebar.subheader("Analysis Controls")
-    analysis_type = st.sidebar.selectbox(
+    return st.sidebar.selectbox(
         "Select Analysis Type",
-        ["Distribution Analysis", "Correlation Analysis", "Manufacturer Analysis", "Price Analysis"]
+        ["Distribution Analysis", "Correlation Analysis", 
+         "Manufacturer Analysis", "Review Analysis", 
+         "Composition Analysis"]
     )
 
-    if analysis_type == "Distribution Analysis":
-        render_distribution_analysis()
-    elif analysis_type == "Correlation Analysis":
-        render_correlation_analysis()
-    elif analysis_type == "Manufacturer Analysis":
-        render_manufacturer_analysis()
-    elif analysis_type == "Price Analysis":
-        render_price_analysis()
-
+# =============================================================================
+# DISTRIBUTION ANALYSIS
+# =============================================================================
 def render_distribution_analysis():
     """Render distribution analysis section"""
     st.subheader("Distribution Analysis")
@@ -32,110 +47,182 @@ def render_distribution_analysis():
     col1, col2 = st.columns(2)
     
     with col1:
-        # Effectiveness Distribution
-        fig_eff = px.histogram(
-            st.session_state.data,
-            x="Overall_Score",
-            nbins=30,
-            title="Distribution of Medicine Effectiveness",
-            color_discrete_sequence=['rgba(0, 100, 200, 0.7)']
-        )
-        st.plotly_chart(fig_eff, use_container_width=True)
-    
+        render_review_distribution()
     with col2:
-        # Price Distribution
-        fig_price = px.histogram(
-            st.session_state.data,
-            x="Price",
-            nbins=30,
-            title="Distribution of Medicine Prices",
-            color_discrete_sequence=['rgba(0, 200, 100, 0.7)']
-        )
-        st.plotly_chart(fig_price, use_container_width=True)
+        render_manufacturer_distribution()
+    
+    render_review_statistics()
 
+def render_review_distribution():
+    """Render review score distributions"""
+    fig = px.histogram(
+        st.session_state.data,
+        x="Excellent Review %",
+        nbins=30,
+        title="Distribution of Excellent Reviews",
+        color_discrete_sequence=['rgba(0, 100, 200, 0.7)']
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+def render_manufacturer_distribution():
+    """Render manufacturer distribution"""
+    top_manufacturers = (st.session_state.data['Manufacturer']
+                        .value_counts()
+                        .head(10))
+    
+    fig = px.bar(
+        x=top_manufacturers.values,
+        y=top_manufacturers.index,
+        orientation='h',
+        title="Top 10 Manufacturers by Number of Medicines"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# =============================================================================
+# CORRELATION ANALYSIS
+# =============================================================================
 def render_correlation_analysis():
     """Render correlation analysis section"""
     st.subheader("Correlation Analysis")
     
-    # Calculate correlations
-    numeric_cols = st.session_state.data.select_dtypes(include=['float64', 'int64']).columns
-    corr_matrix = st.session_state.data[numeric_cols].corr()
+    review_cols = ['Excellent Review %', 'Average Review %', 'Poor Review %']
+    corr_matrix = st.session_state.data[review_cols].corr()
     
-    # Plot correlation heatmap
     fig = px.imshow(
         corr_matrix,
-        title="Feature Correlation Matrix",
+        title="Review Score Correlations",
         color_continuous_scale="RdBu"
     )
     st.plotly_chart(fig, use_container_width=True)
+    
+    render_review_relationships()
 
+def render_review_relationships():
+    """Render relationships between review scores"""
+    fig = px.scatter_matrix(
+        st.session_state.data,
+        dimensions=['Excellent Review %', 'Average Review %', 'Poor Review %'],
+        title="Review Score Relationships"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# =============================================================================
+# MANUFACTURER ANALYSIS
+# =============================================================================
 def render_manufacturer_analysis():
     """Render manufacturer analysis section"""
     st.subheader("Manufacturer Analysis")
     
-    # Top manufacturers by average effectiveness
-    top_manufacturers = (st.session_state.data.groupby('Manufacturer')
-                        .agg({
-                            'Overall_Score': 'mean',
-                            'Price': 'mean',
-                            'Medicine_Name': 'count'
-                        })
-                        .round(2)
-                        .sort_values('Overall_Score', ascending=False)
-                        .head(10))
-    
-    # Rename columns for display
-    top_manufacturers.columns = ['Avg Effectiveness', 'Avg Price', 'Number of Medicines']
+    manufacturer_metrics = calculate_manufacturer_metrics()
     
     col1, col2 = st.columns(2)
     
     with col1:
-        fig_mfg = px.bar(
-            top_manufacturers,
-            y=top_manufacturers.index,
-            x='Avg Effectiveness',
-            title="Top Manufacturers by Effectiveness",
-            orientation='h'
-        )
-        st.plotly_chart(fig_mfg, use_container_width=True)
-    
+        render_manufacturer_performance(manufacturer_metrics)
     with col2:
-        st.dataframe(top_manufacturers)
+        render_manufacturer_details(manufacturer_metrics)
 
-def render_price_analysis():
-    """Render price analysis section"""
-    st.subheader("Price Analysis")
-    
-    # Price range selector
-    price_range = st.slider(
-        "Select Price Range",
-        min_value=float(st.session_state.data['Price'].min()),
-        max_value=float(st.session_state.data['Price'].max()),
-        value=(float(st.session_state.data['Price'].min()),
-               float(st.session_state.data['Price'].max()))
-    )
-    
-    # Filter data based on price range
-    filtered_data = st.session_state.data[
-        st.session_state.data['Price'].between(price_range[0], price_range[1])
-    ]
+def calculate_manufacturer_metrics():
+    """Calculate manufacturer performance metrics"""
+    return (st.session_state.data.groupby('Manufacturer')
+            .agg({
+                'Excellent Review %': 'mean',
+                'Average Review %': 'mean',
+                'Poor Review %': 'mean',
+                'Medicine Name': 'count'
+            })
+            .round(2)
+            .sort_values('Excellent Review %', ascending=False))
+
+# =============================================================================
+# REVIEW ANALYSIS
+# =============================================================================
+def render_review_analysis():
+    """Render review analysis section"""
+    st.subheader("Review Analysis")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Price vs Effectiveness scatter plot
-        fig_scatter = px.scatter(
-            filtered_data,
-            x="Price",
-            y="Overall_Score",
-            color="Manufacturer",
-            title="Price vs Effectiveness",
-            trendline="ols"
-        )
-        st.plotly_chart(fig_scatter, use_container_width=True)
-    
+        render_review_trends()
     with col2:
-        # Price statistics
-        st.subheader("Price Statistics")
-        price_stats = filtered_data['Price'].describe().round(2)
-        st.dataframe(pd.DataFrame(price_stats))
+        render_review_breakdown()
+
+def render_review_trends():
+    """Render review score trends"""
+    review_means = pd.DataFrame({
+        'Type': ['Excellent', 'Average', 'Poor'],
+        'Percentage': [
+            st.session_state.data['Excellent Review %'].mean(),
+            st.session_state.data['Average Review %'].mean(),
+            st.session_state.data['Poor Review %'].mean()
+        ]
+    })
+    
+    fig = px.bar(
+        review_means,
+        x='Type',
+        y='Percentage',
+        title="Average Review Distribution"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# =============================================================================
+# COMPOSITION ANALYSIS
+# =============================================================================
+def render_composition_analysis():
+    """Render composition analysis section"""
+    st.subheader("Composition Analysis")
+    
+    composition_stats = analyze_compositions()
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        render_composition_complexity(composition_stats)
+    with col2:
+        render_composition_details(composition_stats)
+
+def analyze_compositions():
+    """Analyze medicine compositions"""
+    return (st.session_state.data['Composition']
+            .str.split('+')
+            .agg(['count', 'unique']))
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+def render_statistics_table(data: pd.DataFrame, title: str):
+    """Render a formatted statistics table"""
+    st.subheader(title)
+    st.dataframe(
+        data.style.background_gradient(cmap='Blues'),
+        use_container_width=True
+    )
+
+def create_plotly_figure(data, plot_type: str, **kwargs):
+    """Create a plotly figure with consistent styling"""
+    plot_functions = {
+        'bar': px.bar,
+        'scatter': px.scatter,
+        'histogram': px.histogram,
+        'box': px.box
+    }
+    
+    fig = plot_functions[plot_type](data, **kwargs)
+    fig.update_layout(
+        template='plotly_white',
+        title_x=0.5,
+        margin=dict(t=50, l=0, r=0, b=0)
+    )
+    return fig
+
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+if __name__ == "__main__":
+    st.set_page_config(page_title="Medicine Data Analysis", page_icon="📊", layout="wide")
+    if 'data' in st.session_state:
+        render_data_analysis()
+    else:
+        st.error("Please load data first!")

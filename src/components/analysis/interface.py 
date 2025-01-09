@@ -1,48 +1,103 @@
+# =============================================================================
+# IMPORTS AND SETUP
+# =============================================================================
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
+import numpy as np
 
+# =============================================================================
+# MAIN ANALYSIS INTERFACE
+# =============================================================================
 def render_analysis_interface(df: pd.DataFrame):
-    """Render the analysis interface"""
+    """Render the main analysis interface"""
     st.title("Medicine Data Analysis")
     
-    # Analysis type selector
-    analysis_type = st.selectbox(
-        "Select Analysis Type",
-        ["Overview", "Review Analysis", "Manufacturer Analysis"]
-    )
-    
-    if analysis_type == "Overview":
-        render_overview(df)
-    elif analysis_type == "Review Analysis":
-        render_review_analysis(df)
-    elif analysis_type == "Manufacturer Analysis":
-        render_manufacturer_analysis(df)
+    analysis_type = render_analysis_selector()
+    render_selected_analysis(analysis_type, df)
 
+def render_analysis_selector():
+    """Render analysis type selector"""
+    return st.selectbox(
+        "Select Analysis Type",
+        ["Overview", "Review Analysis", "Manufacturer Analysis", 
+         "Composition Analysis", "Side Effects Analysis"]
+    )
+
+def render_selected_analysis(analysis_type: str, df: pd.DataFrame):
+    """Render the selected analysis type"""
+    analysis_functions = {
+        "Overview": render_overview,
+        "Review Analysis": render_review_analysis,
+        "Manufacturer Analysis": render_manufacturer_analysis,
+        "Composition Analysis": render_composition_analysis,
+        "Side Effects Analysis": render_side_effects_analysis
+    }
+    
+    analysis_functions[analysis_type](df)
+
+# =============================================================================
+# DATA OVERVIEW
+# =============================================================================
 def render_overview(df: pd.DataFrame):
-    """Render data overview"""
+    """Render comprehensive data overview"""
     st.subheader("Data Overview")
     
-    # Basic statistics
-    col1, col2 = st.columns(2)
+    render_key_metrics(df)
+    render_data_summary(df)
+    render_data_sample(df)
+
+def render_key_metrics(df: pd.DataFrame):
+    """Render key metrics in columns"""
+    col1, col2, col3, col4 = st.columns(4)
+    
     with col1:
-        st.metric("Total Medicines", len(df))
-        st.metric("Total Manufacturers", df['Manufacturer'].nunique())
+        st.metric(
+            "Total Medicines",
+            len(df),
+            help="Total number of medicines in dataset"
+        )
     
     with col2:
-        st.metric("Average Rating", f"{df['Excellent Review %'].mean():.1f}%")
-        st.metric("Medicines with Side Effects", 
-                 f"{df['Side_effects'].notna().sum()}")
+        st.metric(
+            "Manufacturers",
+            df['Manufacturer'].nunique(),
+            help="Number of unique manufacturers"
+        )
     
-    # Show sample data
-    st.subheader("Sample Data")
-    st.dataframe(df.head())
+    with col3:
+        st.metric(
+            "Avg Rating",
+            f"{df['Excellent Review %'].mean():.1f}%",
+            help="Average excellent review percentage"
+        )
+    
+    with col4:
+        st.metric(
+            "With Side Effects",
+            f"{df['Side_effects'].notna().sum()}",
+            help="Medicines with documented side effects"
+        )
 
+# =============================================================================
+# REVIEW ANALYSIS
+# =============================================================================
 def render_review_analysis(df: pd.DataFrame):
-    """Render review analysis"""
+    """Render comprehensive review analysis"""
     st.subheader("Review Score Analysis")
     
-    # Review distribution
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        render_review_distribution(df)
+    with col2:
+        render_review_trends(df)
+    
+    render_review_correlations(df)
+
+def render_review_distribution(df: pd.DataFrame):
+    """Render review score distribution"""
     fig = px.violin(
         df,
         y=["Excellent Review %", "Average Review %", "Poor Review %"],
@@ -51,20 +106,121 @@ def render_review_analysis(df: pd.DataFrame):
     )
     st.plotly_chart(fig, use_container_width=True)
 
+def render_review_trends(df: pd.DataFrame):
+    """Render review score trends"""
+    review_trends = calculate_review_trends(df)
+    fig = create_trends_chart(review_trends)
+    st.plotly_chart(fig, use_container_width=True)
+
+# =============================================================================
+# MANUFACTURER ANALYSIS
+# =============================================================================
 def render_manufacturer_analysis(df: pd.DataFrame):
-    """Render manufacturer analysis"""
+    """Render comprehensive manufacturer analysis"""
     st.subheader("Manufacturer Analysis")
     
-    # Top manufacturers
-    top_mfg = (df.groupby('Manufacturer')['Excellent Review %']
-               .agg(['mean', 'count'])
-               .sort_values('mean', ascending=False)
-               .head(10))
+    manufacturer_stats = calculate_manufacturer_stats(df)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        render_top_manufacturers(manufacturer_stats)
+    with col2:
+        render_manufacturer_distribution(manufacturer_stats)
+
+def calculate_manufacturer_stats(df: pd.DataFrame):
+    """Calculate manufacturer statistics"""
+    return (df.groupby('Manufacturer')
+            .agg({
+                'Excellent Review %': ['mean', 'count'],
+                'Medicine Name': 'count',
+                'Price': 'mean'
+            })
+            .round(2))
+
+def render_top_manufacturers(stats: pd.DataFrame):
+    """Render top manufacturers chart"""
+    top_mfg = stats.nlargest(10, ('Excellent Review %', 'mean'))
     
     fig = px.bar(
         top_mfg,
-        y='mean',
+        y=('Excellent Review %', 'mean'),
         title="Top 10 Manufacturers by Review Score",
         labels={'mean': 'Average Excellent Review %'}
     )
     st.plotly_chart(fig, use_container_width=True)
+
+# =============================================================================
+# COMPOSITION ANALYSIS
+# =============================================================================
+def render_composition_analysis(df: pd.DataFrame):
+    """Render composition analysis"""
+    st.subheader("Composition Analysis")
+    
+    composition_stats = analyze_compositions(df)
+    render_composition_insights(composition_stats)
+
+def analyze_compositions(df: pd.DataFrame):
+    """Analyze medicine compositions"""
+    return {
+        'unique_components': len(set(' '.join(df['Composition']).split())),
+        'avg_components': df['Composition'].str.split().str.len().mean(),
+        'common_components': get_common_components(df)
+    }
+
+# =============================================================================
+# SIDE EFFECTS ANALYSIS
+# =============================================================================
+def render_side_effects_analysis(df: pd.DataFrame):
+    """Render side effects analysis"""
+    st.subheader("Side Effects Analysis")
+    
+    side_effects_stats = analyze_side_effects(df)
+    render_side_effects_insights(side_effects_stats)
+
+def analyze_side_effects(df: pd.DataFrame):
+    """Analyze medicine side effects"""
+    return {
+        'total_with_effects': df['Side_effects'].notna().sum(),
+        'avg_effects': df['Side_effects'].str.split().str.len().mean(),
+        'common_effects': get_common_side_effects(df)
+    }
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+def calculate_review_trends(df: pd.DataFrame):
+    """Calculate review score trends"""
+    return df.groupby('Manufacturer')['Excellent Review %'].mean().sort_values()
+
+def create_trends_chart(trends: pd.Series):
+    """Create review trends chart"""
+    return px.line(
+        trends,
+        title="Review Score Trends by Manufacturer",
+        labels={'value': 'Average Excellent Review %'}
+    )
+
+def get_common_components(df: pd.DataFrame):
+    """Get most common medicine components"""
+    all_components = ' '.join(df['Composition']).split()
+    return pd.Series(all_components).value_counts().head(10)
+
+def get_common_side_effects(df: pd.DataFrame):
+    """Get most common side effects"""
+    all_effects = ' '.join(df['Side_effects'].dropna()).split()
+    return pd.Series(all_effects).value_counts().head(10)
+
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+if __name__ == "__main__":
+    st.set_page_config(
+        page_title="Medicine Data Analysis",
+        page_icon="📊",
+        layout="wide"
+    )
+    if 'data' in st.session_state:
+        render_analysis_interface(st.session_state.data)
+    else:
+        st.error("Please load data first!")
