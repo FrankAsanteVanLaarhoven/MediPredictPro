@@ -11,9 +11,3 @@ streamlit-option-menu==0.3.12
 streamlit-lottie==0.0.3
 watchdog
 kagglehub
-seaborn==0.13.2  # Add this line
-matplotlib==3.8.3  # Add this as seaborn depends on it
-kaggle==1.6.3  # Change this line
-kagglehub
-seaborn==0.13.2
-matplotlib==3.8.3
