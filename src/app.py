@@ -528,7 +528,7 @@ class Dashboard:
             
         except Exception as e:
             st.error(f"An unexpected error occurred: {str(e)}")
-            st.exception(e))
+            st.exception(e)
 
 # =============================================================================
 # ADVANCED ANALYTICS FUNCTIONS
