@@ -640,8 +640,8 @@ def health_check():
         "version": "1.0.0"
     })
 
-# Check for health query parameter
-if "health" in st.experimental_get_query_params():
+# healtcheck
+if "health" in st.query_params:
     st.write(health_check())
     st.stop()
     
