@@ -3,7 +3,22 @@ services:
     name: medipredictpro
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run app.py
+    startCommand: streamlit run src/app.py
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.12
+        value: 3.11.11
+    # Add monitoring and health checks
+    healthCheckPath: /health
+    autoDeploy: true
+    plan: starter
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+    metrics:
+      - type: cpu
+        threshold: 80
+      - type: memory
+        threshold: 90
+    alerts:
+      - type: web_health
+        threshold: 1

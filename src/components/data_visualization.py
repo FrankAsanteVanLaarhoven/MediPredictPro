@@ -290,6 +290,15 @@ def create_box_plot(x_var, y_var, color_var, size_var=None):
     
     return px.box(**plot_kwargs)
 
+def plot_data(data):
+    if sns:
+        # Seaborn plot
+        fig = sns.histplot(data)
+    else:
+        # Plotly alternative
+        fig = px.histogram(data)
+    return fig
+
 # =============================================================================
 # MAIN EXECUTION
 # =============================================================================

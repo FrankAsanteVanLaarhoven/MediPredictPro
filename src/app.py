@@ -14,7 +14,12 @@ import plotly.graph_objects as go
 from datetime import datetime
 import json
 import time
-import seaborn as sns
+# Try to import seaborn, use alternative if not available
+try:
+    import seaborn as sns
+except ImportError:
+    st.warning("Seaborn not available, using alternative plotting methods")
+    sns = None
 from scipy import stats
 import io
 import kagglehub
@@ -35,52 +40,39 @@ st.set_page_config(
 # =============================================================================
 # DATA LOADER CLASS
 # =============================================================================
-
-import streamlit as st
-import pandas as pd
-import numpy as np
-import os
-import kagglehub
-from dotenv import load_dotenv
-
-import streamlit as st
-import pandas as pd
-import numpy as np
-import os
-import kagglehub
-
 class DataLoader:
-    """Class to handle all data loading operations with Streamlit secrets"""
-    
     def __init__(self):
         self._load_configuration()
-        self.data = None
-        os.makedirs(self.data_path, exist_ok=True)
-        
-        if self.debug_mode:
-            self._verify_configuration()
 
     def _load_configuration(self):
-        """Load configuration from Streamlit secrets"""
-        # App settings
-        self.app_name = st.secrets.get("app_name", "MediPredictPro")
-        self.environment = st.secrets.get("environment", "production")
-        self.debug_mode = st.secrets.get("debug_mode", False)
+        self.app_name = os.environ.get("APP_NAME", "MediPredictPro")
+        self.environment = os.environ.get("ENVIRONMENT", "production")
+        self.default_dataset = os.environ.get("DEFAULT_DATASET", "singhnavjot2062001/11000-medicine-details")
+        self.max_sample_size = int(os.environ.get("MAX_SAMPLE_SIZE", 1000))
+        self.data_cache_ttl = int(os.environ.get("DATA_CACHE_TTL", 3600))
+        self.debug_mode = os.environ.get("DEBUG_MODE", "false").lower() == "true"
+        self.data_path = os.environ.get("DATA_PATH", "data")
         
-        # Data paths and settings
-        self.data_path = st.secrets.get("data_path", "data")
-        self.sample_size = st.secrets.get("sample_size", 100)
-        self.max_sample_size = st.secrets.get("max_sample_size", 1000)
         
-        # Load manufacturers
-        self.manufacturers = st.secrets.get("manufacturers", [
-            "Pfizer", "Novartis", "Roche", "Merck", "GSK"
-        ])
         
-        # Load ranges
-        self.price_range = st.secrets.get("price_range", {"min": 10, "max": 1000})
-        self.effectiveness_range = st.secrets.get("effectiveness_range", {"min": 70, "max": 100})
-        self.stock_range = st.secrets.get("stock_range", {"min": 0, "max": 1000})
+        # Convert comma-separated string to list
+        self.manufacturers = os.environ.get("MANUFACTURERS", "").split(",")
+        
+        # Get ranges
+        self.price_range = {
+            "min": int(os.environ.get("PRICE_RANGE_MIN", 10)),
+            "max": int(os.environ.get("PRICE_RANGE_MAX", 1000))
+        }
+        
+        self.effectiveness_range = {
+            "min": int(os.environ.get("EFFECTIVENESS_RANGE_MIN", 70)),
+            "max": int(os.environ.get("EFFECTIVENESS_RANGE_MAX", 100))
+        }
+        
+        self.stock_range = {
+            "min": int(os.environ.get("STOCK_RANGE_MIN", 0)),
+            "max": int(os.environ.get("STOCK_RANGE_MAX", 1000))
+        }
 
     def _verify_configuration(self):
         """Display current configuration settings"""
@@ -612,7 +604,7 @@ def render_outlier_detection(data: pd.DataFrame):
 def render_sidebar():
     """Render the complete sidebar"""
     with st.sidebar:
-        st.title("MediPredictPro 🏥")
+        st.title(os.environ.get("APP_NAME", "MediPredictPro 🏥"))
         
         data_loader = DataLoader()
         data_loader.render_data_controls()
@@ -637,6 +629,28 @@ def render_kaggle_instructions():
     5. This will download a `kaggle.json` file containing your credentials
     6. Enter the username and key from that file in the fields above
     """)
+
+# Add health check function
+@st.cache_data
+def health_check():
+    """API endpoint for health checking"""
+    return json.dumps({
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0"
+    })
+
+# Check for health query parameter
+if "health" in st.experimental_get_query_params():
+    st.write(health_check())
+    st.stop()
+    
+    
+try:
+    from kaggle.api.kaggle_api_extended import KaggleApi
+except ImportError:
+    st.warning("Kaggle API not available, using alternative data source")
+    # Use alternative data loading method
 
 def main():
     try:
