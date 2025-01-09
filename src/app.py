@@ -61,6 +61,7 @@ st.set_page_config(
 class DataLoader:
     def __init__(self):
         self._load_configuration()
+        self.kaggle_available = KAGGLE_AVAILABLE
 
     def _load_configuration(self):
         self.app_name = os.environ.get("APP_NAME", "MediPredictPro")
@@ -71,10 +72,8 @@ class DataLoader:
         self.debug_mode = os.environ.get("DEBUG_MODE", "false").lower() == "true"
         self.data_path = os.environ.get("DATA_PATH", "data")
         
-        
-        
         # Convert comma-separated string to list
-        self.manufacturers = os.environ.get("MANUFACTURERS", "").split(",")
+        self.manufacturers = os.environ.get("MANUFACTURERS", "Pfizer,Novartis,Roche,Merck,GSK,AstraZeneca,Johnson & Johnson").split(",")
         
         # Get ranges
         self.price_range = {
@@ -100,7 +99,7 @@ class DataLoader:
                 "Environment": self.environment,
                 "Debug Mode": self.debug_mode,
                 "Data Path": self.data_path,
-                "Sample Size": self.sample_size,
+                "Sample Size": self.max_sample_size,
                 "Manufacturers": self.manufacturers,
                 "Price Range": self.price_range,
                 "Effectiveness Range": self.effectiveness_range,
@@ -142,6 +141,10 @@ class DataLoader:
 
     def load_kaggle_data(self, dataset_name: str) -> pd.DataFrame:
         """Load data from Kaggle using configured settings"""
+        if not self.kaggle_available:
+            st.error("Kaggle integration is not available")
+            return None
+
         try:
             if self.debug_mode:
                 st.info(f"Loading dataset: {dataset_name}")
@@ -227,35 +230,33 @@ class DataLoader:
                     st.error(f"Error loading file: {str(e)}")
         
         elif data_source == "Kaggle Dataset":
-            with st.sidebar.expander("Kaggle Dataset", expanded=True):
-                st.markdown("""
-            ### Load Kaggle Dataset
-            Enter the dataset name (format: username/dataset-name)
-            
-            Example:
-            ```
-            singhnavjot2062001/11000-medicine-details
-            ```
-            """)
-            
-            dataset_name = st.text_input(
-                "Dataset Name",
-                value=self.default_dataset,
-                placeholder="username/dataset-name"
-            )
+            if not self.kaggle_available:
+                st.error("Kaggle integration is not available. Please use Sample Data or Local File upload.")
+            else:
+                with st.sidebar.expander("Kaggle Dataset", expanded=True):
+                    st.markdown("""
+                    ### Load Kaggle Dataset
+                    Enter the dataset name (format: username/dataset-name)
+                    
+                    Example:
+                    ```
+                    singhnavjot2062001/11000-medicine-details
+                    ```
+                    """)
+                    
+                    dataset_name = st.text_input(
+                        "Dataset Name",
+                        value=self.default_dataset,
+                        placeholder="username/dataset-name"
+                    )
 
-            if st.button("Load Dataset"):
-                if not dataset_name:
-                    st.error("Please provide a dataset name")
-                else:
-                    st.session_state.data = self.load_kaggle_data(dataset_name)
-                    if st.session_state.data is not None:
-                        st.success("Dataset loaded successfully!")
-                        
-                        # Then in your data loading code:
-if data_source == "Kaggle Dataset" and not KAGGLE_AVAILABLE:
-    st.error("Kaggle integration is not available. Please use Sample Data or Local File upload.")
-    # Use alternative data loading method
+                    if st.button("Load Dataset"):
+                        if not dataset_name:
+                            st.error("Please provide a dataset name")
+                        else:
+                            st.session_state.data = self.load_kaggle_data(dataset_name)
+                            if st.session_state.data is not None:
+                                st.success("Dataset loaded successfully!")
 
 # =============================================================================
 # DASHBOARD CLASS
