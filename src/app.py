@@ -1,33 +1,51 @@
 # =============================================================================
-# IMPORTS AND SETUP
+# STANDARD LIBRARY IMPORTS
 # =============================================================================
-# from dotenv import load_dotenv
-# load_dotenv()
-from analysis_page import AnalysisPage
-from predictions_page import PredictionsPage
-import streamlit as st
-import pandas as pd
 import os
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime
+import io
 import json
 import time
-# Try to import seaborn, use alternative if not available
+from datetime import datetime
+
+# =============================================================================
+# THIRD PARTY IMPORTS
+# =============================================================================
+# Data Processing
+import numpy as np
+import pandas as pd
+
+# Visualization
+import plotly.express as px
+import plotly.graph_objects as go
 try:
     import seaborn as sns
 except ImportError:
-    st.warning("Seaborn not available, using alternative plotting methods")
     sns = None
+
+# Statistical & Machine Learning
 from scipy import stats
-import io
-import kagglehub
-from kaggle.api.kaggle_api_extended import KaggleApi
 from sklearn.preprocessing import StandardScaler
 from sklearn.covariance import EllipticEnvelope
 import statsmodels.api as sm
 
+# Data Sources
+try:
+    from kaggle.api.kaggle_api_extended import KaggleApi
+    KAGGLE_AVAILABLE = True
+except Exception as e:
+    KAGGLE_AVAILABLE = False
+import kagglehub
+
+# =============================================================================
+# STREAMLIT IMPORTS
+# =============================================================================
+import streamlit as st
+
+# =============================================================================
+# LOCAL IMPORTS
+# =============================================================================
+from analysis_page import AnalysisPage
+from predictions_page import PredictionsPage
 
 # Streamlit page configuration
 st.set_page_config(
@@ -233,6 +251,11 @@ class DataLoader:
                     st.session_state.data = self.load_kaggle_data(dataset_name)
                     if st.session_state.data is not None:
                         st.success("Dataset loaded successfully!")
+                        
+                        # Then in your data loading code:
+if data_source == "Kaggle Dataset" and not KAGGLE_AVAILABLE:
+    st.error("Kaggle integration is not available. Please use Sample Data or Local File upload.")
+    # Use alternative data loading method
 
 # =============================================================================
 # DASHBOARD CLASS
@@ -670,9 +693,12 @@ if "health" in st.query_params:
     
 try:
     from kaggle.api.kaggle_api_extended import KaggleApi
-except ImportError:
-    st.warning("Kaggle API not available, using alternative data source")
-    # Use alternative data loading method
+    KAGGLE_AVAILABLE = True
+except Exception as e:
+    KAGGLE_AVAILABLE = False
+    st.warning("Kaggle API not available. Some features may be limited.")
+
+
 
 def main():
     try:
