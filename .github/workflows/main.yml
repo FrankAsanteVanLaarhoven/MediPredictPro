@@ -38,4 +38,6 @@ jobs:
       env:
         RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       run: |
+        echo "Starting deployment to Render..."
         curl -X POST "https://api.render.com/deploy/prj-ctvrla0gph6c73cf8ol0?key=${{ secrets.RENDER_API_KEY }}"
+        echo "Deployment triggered successfully"
