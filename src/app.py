@@ -177,40 +177,40 @@ class DataLoader:
 
     def render_data_controls(self) -> None:
         """Render data loading controls"""
-    st.sidebar.header("Data Controls")
-    
-    data_source = st.sidebar.radio(
-        "Select Data Source",
-        ["Sample Data", "Local File", "Kaggle Dataset"]
-    )
-    
-    if data_source == "Sample Data":
-        if st.sidebar.button("Load Sample Data"):
-            # Create sample data
-            sample_data = pd.DataFrame({
-                'Medicine_Name': ['Med A', 'Med B', 'Med C', 'Med D'],
-                'Price': [100, 200, 150, 300],
-                'Manufacturer': ['Pfizer', 'Novartis', 'Roche', 'GSK'],
-                'Effectiveness': [85, 90, 75, 95],
-                'Stock_Level': [500, 300, 200, 400],
-                'Is_Generic': [True, False, True, False]
-            })
-            st.session_state.data = sample_data
-            st.success("Sample data loaded successfully!")
+        st.sidebar.header("Data Controls")
+        
+        data_source = st.sidebar.radio(
+            "Select Data Source",
+            ["Sample Data", "Local File", "Kaggle Dataset"]
+        )
+        
+        if data_source == "Sample Data":
+            if st.sidebar.button("Load Sample Data"):
+                # Create sample data
+                sample_data = pd.DataFrame({
+                    'Medicine_Name': ['Med A', 'Med B', 'Med C', 'Med D'],
+                    'Price': [100, 200, 150, 300],
+                    'Manufacturer': ['Pfizer', 'Novartis', 'Roche', 'GSK'],
+                    'Effectiveness': [85, 90, 75, 95],
+                    'Stock_Level': [500, 300, 200, 400],
+                    'Is_Generic': [True, False, True, False]
+                })
+                st.session_state.data = self.validate_data(sample_data)
+                st.success("Sample data loaded successfully!")
 
-    elif data_source == "Local File":
-        uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type="csv")
-        if uploaded_file is not None:
-            try:
-                data = pd.read_csv(uploaded_file)
-                st.session_state.data = self.validate_data(data)
-                st.success("File uploaded successfully!")
-            except Exception as e:
-                st.error(f"Error loading file: {str(e)}")
-    
-    elif data_source == "Kaggle Dataset":
-        with st.sidebar.expander("Kaggle Dataset", expanded=True):
-            st.markdown("""
+        elif data_source == "Local File":
+            uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type="csv")
+            if uploaded_file is not None:
+                try:
+                    data = pd.read_csv(uploaded_file)
+                    st.session_state.data = self.validate_data(data)
+                    st.success("File uploaded successfully!")
+                except Exception as e:
+                    st.error(f"Error loading file: {str(e)}")
+        
+        elif data_source == "Kaggle Dataset":
+            with st.sidebar.expander("Kaggle Dataset", expanded=True):
+                st.markdown("""
             ### Load Kaggle Dataset
             Enter the dataset name (format: username/dataset-name)
             
